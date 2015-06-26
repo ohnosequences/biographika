@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<title>
+  3D Bar Chart
+</title>
+<!-- Bootstrap Core CSS -->
+<link href="css/bootstrap.css" rel="stylesheet" type='text/css'>
+<style type="text/css">
+
+  body {
+      background-color: #f8f8f8;
+  }
+
+  .row
+  {
+      height: 100%;
+      width: 100%;
+  }
+
+  .panel {
+    margin-right: 10px;
+  	margin-left: 10px;
+  	margin-top: 10px;
+    height: 100%;
+  }
+
+  #wrapper {
+      width: 100%;
+  }
+
+  #page-wrapper {
+      padding: 0 15px;
+      min-height: 568px;
+      background-color: #fff;
+  }
+
+  .node {
+    cursor: pointer;
+  }
+
+  .overlay{
+      background-color:#EEE;
+  }
+
+  .node circle {
+    fill: #fff;
+    stroke: steelblue;
+    stroke-width: 1.5px;
+  }
+
+  .node text {
+    font-size:10px;
+    font-family:sans-serif;
+  }
+
+  .link {
+    fill: none;
+    stroke: #ccc;
+    stroke-width: 1.5px;
+  }
+
+  .hiddenDiv {
+    display : none;
+  }
+
+  .visibleDiv {
+    display : block;
+  }
+
+  .loaderDiv {
+    display : block;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 150;
+    height: 80;
+  }
+
+  .tooltipDivHidden {
+    display : none;
+    opacity: 0;
+  }
+
+  .tooltipDivVisible {
+    display : block;
+    position: absolute;
+    background: white;
+    font: 12px sans-serif;
+    opacity: .9;
+    padding: 2px;
+    border: 0px;
+    border-radius: 8px;
+  }
+
+  .x3d-panel {
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+  }
+
+  .x3d-container {
+    width: 100%;
+    height: 100%;
+    display:none;
+  }
+
+
+</style>
+<link rel="stylesheet" type="text/css" href="css/jquery-ui.css">
+<script src="js/jquery-1.9.1.min.js"></script>
+<script src="js/d3.min.js"></script>
+<script src="js/x3dom.js"></script>
+<script src="js/jquery-ui.js"></script>
+<script type="text/javascript"> if (!window.console) console = {log: function() {}}; </script>
+<script type="text/javascript"> window.requestFileSystem  = window.requestFileSystem || window.webkitRequestFileSystem;</script>
+<body onload="onLoad()">
+  <div id="wrapper">
+    <!-- Navigation -->
+    <nav class="navbar navbar-default navbar-static-top" role="navigation" style="margin-bottom: 0">
+      <div class="navbar-header">
+        <a class="navbar-brand" >
+          3D Bar chart
+        </a>
+      </div>
+      <!-- /.navbar-static-side -->
+    </nav>
+    <div id="page-wrapper">
+      <div id="bar-chart-row" class="row" style="min-height:400px">
+        <div class="col-md-12">
+          <div class="panel panel-info">
+            <div class="panel-heading">
+              <i class="fa fa-fw">
+              </i>
+              Species-Samples values
+            </div>
+            <!-- /.panel-heading -->
+            <div id="x3d-panel" class="panel-body x3d-panel">
+                <div id="x3d-container" class="x3d-container">
+                  <x3d id="x3d">
+                    <scene id="scene" render"false">
+                      <viewpoint id="viewpoint"/>
+                    </scene>
+                  </x3d>
+                </div>
+                <div id="loader_container" class="loaderDiv">
+              	</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-12">
+          <div class="panel panel-info">
+            <div class="panel-heading">
+              <i class="fa fa-fw">
+              </i>
+              Tools
+            </div>
+            <!-- /.panel-heading -->
+            <div class="panel-body">
+              <div id="slider-container">
+                Current value: <strong><span id="sliderValueText">0</span></strong><i>  (Move the slider to highlight bars above/below the threshold specified by the slider)</i>
+                <input type="range" min="0" max="1" value="0" id="slider" step="1" oninput="onSlideChange(value)" style="margin-botton:10px">
+            		<input type="button" value="Take screenshot!" onclick="takeScreenshot()"/>
+            		<input type="checkbox" checked="true" id="tooltips-checkbox">Tooltips activated</input>
+            	</div>
+            </div>
+            <!-- /.panel-body -->
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- page-wrapper -->
+  </div>
+	<div id="tooltip-container" class="tooltipDivHidden">
+	    <span id="tooltipValueText"></span>
+	</div>
+<script type="text/javascript">
+
+  window.addEventListener('resize', onWindowResize, true);
+
+	var speciesBarGroupPrefix = "speciesBarGroup";
+	var barPrefix = "bar";
+
+	var selectedColor = "yellow";
+	var unselectedColor = "steelblue";
+	var minValue = 0;
+	var maxValue = 0;
+	var numberOfStepsForSlider = 100;
+	var scaleFactorForBars = 10;
+
+	var lastSpeciesGroupHighlighted;
+
+	// size of the diagram
+  //var viewerWidth = $(document).width();
+  //var viewerHeight = $(document).height();
+
+	var viewpoint = d3.select("#viewpoint");
+		viewpoint
+           .attr( "centerOfRotation", "3.75 0 10")
+           .attr( "position", "50 -50 20" )
+           .attr( "orientation", "0.962043810961999 0.1696342804961945 0.21376603254551874 1.379433089729343" )
+           ;
+
+  var generalLoader = loader({width: 100, height: 50, container: "#loader_container", id: "loader"});
+
+	var numberOfSamples;
+	var numberOfSpecies;
+
+	var barSquareSideValue = 1.0;
+	var gapBetweenBars = 0.5;
+
+	var headerNames;
+
+	d3.csv("data/3d_bar_chart.csv", function (data) {
+
+		headerNames = d3.keys(data[0]);
+		headerNames.splice(0,2);
+
+		numberOfSpecies = data.length;
+		createRowsOfShapes(data);
+
+		updateViewpoint();
+		updateSlider();
+
+		createBarTransitions();
+		makeThingsVisible();
+	});
+
+	function updateSlider(){
+
+		var step = (maxValue - minValue)/numberOfStepsForSlider;
+
+		d3.select("#slider")
+			.attr("value",minValue)
+			.attr("min",minValue)
+			.attr("max",maxValue)
+			.attr("step",step);
+
+	}
+
+	function onSlideChange(value){
+
+		d3.select("#sliderValueText").text(value);
+
+		var barGroups = document.getElementById("scene").getElementsByTagName("group");
+
+		for (var i = 0; i<barGroups.length; i++){
+			var barGroup = barGroups[i];
+			var transformArray = barGroup.getElementsByTagName("transform");
+			for(var j=0;j<transformArray.length;j++){
+				var currentTrasnform = transformArray[j];
+				var currentShape = currentTrasnform.getElementsByTagName("shape")[0];
+				var colorToBeUsed = unselectedColor;
+				var tempValue = +currentTrasnform.getAttribute("value");
+
+				if(tempValue > value){
+					colorToBeUsed = selectedColor;
+				}
+				colourBar(colorToBeUsed, currentShape);
+			}
+		}
+
+	}
+
+
+
+	function updateViewpoint(){
+		var xPoint = ((numberOfSamples * barSquareSideValue) + ((numberOfSamples - 1) * gapBetweenBars))/1.5;
+		var yPoint = ((numberOfSpecies * barSquareSideValue) + ((numberOfSpecies - 1) * gapBetweenBars))/2;
+		viewpoint
+			.attr("centerOfRotation", xPoint + " " + yPoint + " 0")
+			.attr("position", (xPoint + 10) + " " + (-(yPoint)) + " " + (10));
+	}
+
+	function createRowsOfShapes(data){
+
+		for (var rowCounter = 1; rowCounter < data.length; rowCounter++) {
+
+			var tempArray = d3.values(data[rowCounter]);
+			var currentSpeciesName = tempArray[0];
+			var currentSpeciesID = tempArray[1];
+			tempArray.splice(0,2);
+
+			createShapesForSpeciesSamples(tempArray, rowCounter, currentSpeciesName, currentSpeciesID);
+
+		}
+	}
+
+	function createShapesForSpeciesSamples(array, rowCounter, currentSpeciesName, currentSpeciesID){
+
+		numberOfSamples = array.length;
+
+		scene = d3.select("#scene");
+
+		var speciesTextTransform = scene
+			.append( "transform" )
+			.attr("translation", function() {return "-10.0 " + rowCounter*(barSquareSideValue+gapBetweenBars) + " 0.0"} )
+			.attr("speciesid", currentSpeciesID)
+			.attr("speciesName", currentSpeciesName);
+		speciesTextTransform
+			.attr("onmouseover", "onSpeciesTextMouseOver(this)")
+			.attr("onmouseout", "onSpeciesTextMouseOut(this)")
+			.attr("onclick", "onSpeciesTextClick(this)");
+
+		var speciesTextShape = speciesTextTransform
+			 .append( "shape" );
+
+		speciesTextShape
+			 .append( "text" )
+			 .attr("string", currentSpeciesName)
+			 .append( "fontstyle" )
+			 .attr("family","'Times'")
+			 .attr("size", "1");
+
+
+		speciesTextShape.append("appearance")
+				.append("material")
+				.attr("diffuseColor", "dark" )
+				;
+
+		var speciesGroup = scene.append( "group" );
+		speciesGroup.attr("speciesID", currentSpeciesID)
+			 .attr("speciesName", currentSpeciesName)
+			 .attr("id",speciesBarGroupPrefix + currentSpeciesID)
+			 .attr("render","false");
+
+		for (var arrayCounter = 0; arrayCounter < array.length; arrayCounter++) {
+
+		    var currentSample = headerNames[arrayCounter];
+
+			var value = +array[arrayCounter];
+
+			//-----updating max and min value---------------
+			if(value < minValue){
+				minValue = value;
+			}
+			if(value > maxValue){
+				maxValue = value;
+			}
+
+			var transform = speciesGroup.append( "transform" )
+					.attr("translation", function() {return arrayCounter*(barSquareSideValue+gapBetweenBars) + " " + rowCounter*(barSquareSideValue+gapBetweenBars) + " 0.0"} )
+					.attr("scale", function() {return "1.0 1.0 0.0" } );
+
+
+			transform
+				.attr("value",value)
+				.attr("onclick","onBarTransformClick(this)")
+				.attr("onmouseover", "onBarMouseOver(event)")
+				.attr("onmouseout", "onBarMouseOut(event)")
+				.attr("id",function(){return barPrefix + "_" + currentSpeciesID + "_" + currentSpeciesName + "_" + currentSample;});
+
+
+			var shape = transform.append( "shape" );
+			shape.append("appearance")
+				.append("material")
+				.attr("diffuseColor", unselectedColor )
+				;
+			shape.append( "box" )
+				.attr( "size", barSquareSideValue + " " + barSquareSideValue + " " + barSquareSideValue );
+
+
+		}
+
+	}
+
+	function onBarTransformClick(element){
+		alert("Value: " + element.getAttribute("value"));
+	}
+	function onBarMouseOver(event){
+
+    	if( document.getElementById("tooltips-checkbox").checked === true){
+    	    var tempValue = event.target.parentNode.getAttribute("value");
+    	    var tempId = event.target.parentNode.getAttribute("id");
+    	    var tempIdSplit = tempId.split("_");
+    	    var tempSpecies = tempIdSplit[1]
+            var tooltip = document.getElementById("tooltip-container").className = "tooltipDivVisible";
+            d3.select("#tooltip-container")
+                .style("left",event.layerX + "px")
+                .style("top",event.layerY + "px");
+            document.getElementById("tooltipValueText").innerHTML = "<b>Value: </b>" + tempValue +
+                "<br><b>Species name: </b>" + tempIdSplit[2] +
+                "<br><b>Species id: </b>" + "<a target=\"_blank\" href=\"http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=" + tempIdSplit[1] + "\">" + tempIdSplit[1] + "</a>" +
+                "<br><b>Sample: </b>" + tempIdSplit[3];
+
+    	}
+    }
+
+    function onBarMouseOut(event){
+        if( document.getElementById("tooltips-checkbox").checked === true){
+            var tooltip = document.getElementById("tooltip-container").className = "tooltipDivHidden";
+        }
+    }
+
+	function onSpeciesTextClick(element){
+		alert("Taxon: " + element.getAttribute("speciesName") + "\nID: " + element.getAttribute("speciesID") );
+	}
+
+	function onSpeciesTextMouseOver(element) {
+		var tempSpeciesId = element.getAttribute("speciesid");
+		highlightSpeciesRow(tempSpeciesId, selectedColor);
+		lastSpeciesGroupHighlighted = tempSpeciesId;
+	}
+	function onSpeciesTextMouseOut(element) {
+		var tempSpeciesId = element.getAttribute("speciesid");
+		highlightSpeciesRow(tempSpeciesId, unselectedColor);
+	}
+
+	function setHandCursor(){
+		document.style.cursor = 'hand';
+	}
+	function setAutoCursor(){
+		document.style.cursor = 'auto';
+	}
+
+	function highlightSpeciesRow(speciesId, color){
+
+		var barGroup = document.getElementById(speciesBarGroupPrefix + speciesId);
+		var transformArray = barGroup.getElementsByTagName("transform");
+
+		for(var i=0;i<transformArray.length;i++){
+			var currentTrasnform = transformArray[i];
+			var currentShape = currentTrasnform.getElementsByTagName("shape")[0];
+			colourBar(color, currentShape);
+		}
+	}
+
+	function colourBar(color, shape){
+		var currentAppearance = shape.getElementsByTagName("appearance")[0];
+		var currentMaterial = currentAppearance.getElementsByTagName("material")[0];
+		currentMaterial.setAttribute("diffuseColor", color);
+	}
+
+	function takeScreenshot(){
+    	window.open(document.getElementById("x3d").runtime.getScreenshot(), '_blank');
+    }
+
+    function createBarTransitions(){
+
+        //alert("createBarTransitions!");
+
+        //-----------------------------------------------------------------------------
+        //Adding transitions so that bars grow up to the size equivalent to their value
+
+        var groups = document.getElementById("scene").getElementsByTagName("group");
+        for(var i=0;i<groups.length;i++){
+            var currentGroup = groups[i];
+            var transforms = currentGroup.getElementsByTagName("transform")
+            for(var j=0;j<transforms.length;j++){
+                var currentTransform = transforms[j];
+                var currentValue = currentTransform.getAttribute("value");
+
+                var translationSplit = currentTransform.getAttribute("translation").split(" ");
+                var newTranslationValue = translationSplit[0] + " " + translationSplit[1] + " " + (currentValue * scaleFactorForBars / 2.0);
+
+                d3.select(currentTransform)
+                    .transition()
+                    .attr("translation", newTranslationValue)
+                    .attr("scale", function() {return "1.0 1.0 " + currentValue * scaleFactorForBars } )
+                    .duration(5000);
+
+            }
+        }
+
+    }
+
+    function makeThingsVisible(){
+        d3.select("#x3d-container").style("display","block");
+        d3.select("#slider-container").style("display","block");
+        document.getElementById("loader_container").className = "hiddenDiv";
+
+        var scene = document.getElementById("scene");
+        scene.setAttribute("render","true");
+        var groups = scene.getElementsByTagName("group");
+        for(var i=0;i<groups.length;i++){
+           var currentGroup = groups[i];
+           currentGroup.setAttribute("render","true");
+        }
+
+        onWindowResize();
+
+    }
+
+    function onLoad(){
+        generalLoader();
+    }
+
+    function onWindowResize(){
+      var tempWidth = document.getElementById("x3d-panel").offsetWidth - 40;
+      var tempHeight = document.getElementById("x3d-panel").offsetHeight - 40;
+      document.getElementById("x3d").setAttribute("width",tempWidth);
+      document.getElementById("x3d").setAttribute("height",tempHeight);
+
+      console.log(tempWidth);
+      console.log(tempHeight);
+    }
+
+    function loader(config) {
+
+      return function() {
+        var radius = Math.min(config.width, config.height) / 2;
+        var tau = 2 * Math.PI;
+
+        var arc = d3.svg.arc()
+                .innerRadius(radius*0.5)
+                .outerRadius(radius*0.9)
+                .startAngle(0);
+
+        var svg = d3.select(config.container).append("svg")
+            .attr("id", config.id)
+            .attr("width", config.width)
+            .attr("height", config.height)
+          .append("g")
+            .attr("transform", "translate(" + config.width / 2 + "," + config.height / 2 + ")")
+
+        var background = svg.append("path")
+                .datum({endAngle: 0.33*tau})
+                .style("fill", "#4D4D4D")
+                .attr("d", arc)
+                .call(spin, 1500)
+
+        function spin(selection, duration) {
+            selection.transition()
+                .ease("linear")
+                .duration(duration)
+                .attrTween("transform", function() {
+                    return d3.interpolateString("rotate(0)", "rotate(360)");
+                });
+
+            setTimeout(function() { spin(selection, duration); }, duration);
+        }
+
+        function transitionFunction(path) {
+            path.transition()
+                .duration(7500)
+                .attrTween("stroke-dasharray", tweenDash)
+                .each("end", function() { d3.select(this).call(transition); });
+        }
+
+      };
+    }
+
+
+	</script>
+</body>
+</html>

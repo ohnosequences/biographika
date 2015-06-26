@@ -1,0 +1,390 @@
+<html lang="en">
+	<!DOCTYPE html>
+	<head>
+		<meta charset="utf-8">
+		<title>
+			Antiobiotic Resistance Explorer
+		</title>
+		<!-- DC.js CSS -->
+		<link href='lib/css/dc.css' rel='stylesheet' type='text/css'>
+		<!-- Bootstrap Core CSS -->
+		<link href="lib/css/bootstrap.css" rel="stylesheet" type='text/css'>
+		<!-- Antibiotic Resistance Explorer CSS -->
+		<link href='css/antibiotic_resistance_explorer.css' rel='stylesheet' type='text/css'>
+		<script src="lib/js/jquery-1.9.1.min.js"></script>
+		<script src="lib/js/d3.min.js"></script>
+		<script src="lib/js/crossfilter.js"></script>
+		<script src="lib/js/dc.js"></script>
+		<script src="lib/js/jquery-ui.js"></script>
+		<script type="text/javascript"> if (!window.console) console = {log: function() {}}; </script>
+		<script type="text/javascript"> window.requestFileSystem  = window.requestFileSystem || window.webkitRequestFileSystem;</script>
+	</head>
+	<body onload="onLoad()">
+		<div id="wrapper">
+			<!-- Navigation -->
+			<nav class="navbar navbar-default navbar-static-top" role="navigation" style="margin-bottom: 0">
+				<div class="navbar-header">
+					<a class="navbar-brand" >
+						Antibiotic Resistance Explorer v1.0
+					</a>
+				</div>
+				<!-- /.navbar-static-side -->
+			</nav>
+			<div id="page-wrapper">
+				<div class="row">
+					<div class="panel panel-info">
+						<div class="panel-heading">
+							<i class="fa fa-bar-chart-o fa-fw">
+							</i>
+							General charts
+						</div>
+						<!-- /.panel-heading -->
+						<div class="panel-body">
+							<div class="row">
+								<div class="col-lg-4 col-md-4">
+									<div class="panel panel-default">
+										<div class="panel-heading">
+											<i class="fa fa-pie-chart-o fa-fw">
+											</i>
+											<b>Resistance profile distribution</b>
+										</div>
+										<!-- /.panel-heading -->
+										<div class="panel-body">
+											<div id="antibiotic_resistance_pie_chart">
+												<a href="javascript:antibiotic_resistance_pie_chart.filterAll();dc.redrawAll();" >
+													reset
+												</a>
+											</div>
+										</div>
+										<!-- /.panel-body -->
+									</div>
+								</div>
+								<!-- /.col-lg-4 (nested) -->
+								<div class="col-lg-4 col-md-4">
+									<div class="panel panel-default">
+										<div class="panel-heading">
+											<i class="fa fa-bar-chart-o fa-fw">
+											</i>
+											<b>Genes located in plasmids (%)</b>
+										</div>
+										<!-- /.panel-heading -->
+										<div class="panel-body">
+											<div id="plasmid_percentage_bar_chart" class="x_axis_rotated_text">
+												<a href="javascript:plasmidPercentageBarChart.filterAll();dc.redrawAll();" >
+													reset
+												</a>
+											</div>
+										</div>
+										<!-- /.panel-body -->
+									</div>
+								</div>
+								<!-- /.col-lg-3 (nested) -->
+								<div class="col-lg-4 col-md-4">
+									<div class="panel panel-default">
+										<div class="panel-heading">
+											<i class="fa fa-bar-chart-o fa-fw">
+											</i>
+											<b>ATB-resistance genes located in plasmids (%)</b>
+										</div>
+										<!-- /.panel-heading -->
+										<div class="panel-body">
+											<div id="plasmid_and_resistance_percentage_bar_chart" class="x_axis_rotated_text">
+												<a href="javascript:plasmidAndResistancePercentageBarChart.filterAll();dc.redrawAll();">
+													reset
+												</a>
+											</div>
+										</div>
+										<!-- /.panel-body -->
+									</div>
+								</div>
+								<!-- /.col-lg-3 (nested) -->
+							</div>
+							<!-- /.row -->
+						</div>
+						<!-- /.panel-body -->
+					</div>
+				</div>
+				<div class="row">
+					<div class="panel panel-info">
+						<div class="panel-heading">
+							<i class="fa fa-bar-chart-o fa-fw">
+							</i>
+							<b>Interpro motif selected</b>
+							<div class="pull-right">
+								<select id="interpro-select" onchange="updateGraphs()">
+								</select>
+							</div>
+						</div>
+						<!-- /.panel-heading -->
+
+						<div class="panel-body">
+							<div id="interpro_chart" class="x_axis_rotated_text">
+								<a href="javascript:interproGraph.filterAll();dc.redrawAll();" >
+									reset
+								</a>
+							</div>
+						</div>
+						<!-- /.panel-body -->
+					</div>
+				</div>
+			</div>
+		</div>
+		<script type="text/javascript">
+
+				window.addEventListener('resize', onWindowResize, true);
+
+				var headerNames;
+				var speciesDomain = [];
+				var csvData;
+
+				var interproGraph;
+				var antibiotic_resistance_pie_chart;
+				var plasmidPercentageBarChart;
+				var plasmidAndResistancePercentageBarChart;
+				var cr;
+
+				var speciesNameDimension;
+
+				var interproGroups = [];
+				var interproDimensions = [];
+
+				d3.csv("data/antibiotic_resistance_explorer.csv", function (data) {
+
+
+					csvData = data;
+			    	createGraphs();
+
+				});
+
+
+				function updateGraphs(){
+					updateInterproGraph();
+				}
+
+				function resetPieChart(){
+					document.getElementById("antibiotic_resistance_pie_chart").filterAll();
+					dc.redrawAll();
+				}
+
+				function getSelectedInterpro(){
+					var select = document.getElementById("interpro-select");
+					var selectValue = select.options[select.selectedIndex].text;
+					return selectValue;
+				}
+
+
+				function updateInterproGraph(){
+
+					var currentInterpro = getSelectedInterpro();
+
+					interproGroups[currentInterpro] = speciesNameDimension.group().reduceSum(function(d,i) {
+						return d[currentInterpro];
+					});
+
+					interproGraph
+					        .dimension(speciesNameDimension)
+					        .group(interproGroups[currentInterpro])
+					        .x(d3.scale.ordinal().domain(speciesDomain))
+					        .y(d3.scale.linear().range([0, 100]))
+					        .turnOnControls(true);
+
+
+
+					interproGraph.render();
+
+				}
+
+				function createGraphs(){
+
+					headerNames = d3.keys(csvData[0]);
+
+					speciesDomain[-1] = "";
+
+					for(var counter=1;counter<csvData.length;counter++){
+						speciesDomain[counter-1] = csvData[counter][headerNames[1]];
+					}
+
+					cr = crossfilter(csvData);
+
+			    	speciesNameDimension = cr.dimension(function(d) { return d[headerNames[1]]; });
+
+
+					//----------------------------------------------------------------
+					//-----------------antibiotic resistance pie chart----------------
+
+					var resistancePercentageDimension = cr.dimension(function (d) {
+
+				        var resistanceValue = +d.Number_of_proteins_annotated_as_antibiotic_resistance;
+				        var totalValue = +d.Total_number_of_proteins;
+
+				        var percentageResistance = resistanceValue * 100.0 / totalValue;
+
+
+				        if (percentageResistance >= 0 && percentageResistance  <= 0.1) {
+				            return 'Low [0-0.1%)';
+				        } else if (percentageResistance > 0.1 && percentageResistance <= 0.5) {
+				            return 'Medium [0.1-0.5%)';
+				        } else if (percentageResistance > 0.5 && percentageResistance <= 1) {
+				            return 'High [0.5-1%)';
+				        } else {
+				            return 'Superbug [1-100%]';
+				        }
+				    });
+				    var resistancePercentageGroup = resistancePercentageDimension.group();
+
+				    antibiotic_resistance_pie_chart = dc.pieChart('#antibiotic_resistance_pie_chart');
+
+				    antibiotic_resistance_pie_chart
+				    	.width(null)
+				        .height(null)
+				        .minWidth(280)
+					    .minHeight(300)
+				        .radius(90)
+				        .innerRadius(25)
+				        .dimension(resistancePercentageDimension)
+				        .group(resistancePercentageGroup)
+				        .legend(dc.legend().x(220).y(1).itemHeight(13).gap(5))
+				        .turnOnControls(true);
+
+
+				    //----------------------------------------------------------------
+					//-----------------plasmid percentage bar chart----------------
+
+					var plasmidPercentageGroup = speciesNameDimension.group().reduceSum(function(d) {
+						return +d.Number_of_proteins_annotated_as_plasmid * 100.0 / +d.Total_number_of_proteins;
+					});
+
+					plasmidPercentageBarChart = dc.barChart("#plasmid_percentage_bar_chart");
+
+					plasmidPercentageBarChart
+					        .xUnits(dc.units.ordinal)
+					        .yAxisLabel("Percentage")
+					        .width(null)
+					        .height(null)
+					        .minWidth(250)
+					        .minHeight(300)
+					        .elasticY(true)
+					        .transitionDuration(500)
+					        .brushOn(false)
+					        .dimension(speciesNameDimension)
+					        .group(plasmidPercentageGroup)
+					        .x(d3.scale.ordinal().domain(speciesDomain))
+					        .y(d3.scale.linear().range([0, 100]))
+					        .margins({top: 10, right: 10, bottom: 180, left: 80})
+					        .gap(1)
+							.turnOnControls(true);
+
+					plasmidPercentageBarChart.yAxis().tickFormat(
+			        	function (v) { return v + '%'; });
+
+
+			        //----------------------------------------------------------------
+					//-----------------plasmid and resistance percentage bar chart----------------
+
+
+					var plasmidAndResistancePercentageGroup = speciesNameDimension.group().reduceSum(function(d) {
+						return +d.Number_of_proteins_annotated_both_as_plasmid_and_antibiotic_resistance * 100.0 / +d.Total_number_of_proteins;
+					});
+
+					plasmidAndResistancePercentageBarChart = dc.barChart("#plasmid_and_resistance_percentage_bar_chart");
+
+					plasmidAndResistancePercentageBarChart
+					        .xUnits(dc.units.ordinal)
+					        .yAxisLabel("Percentage")
+					        .width(null)
+					        .height(null)
+					        .minWidth(250)
+					        .minHeight(300)
+					        .elasticY(true)
+					        .transitionDuration(500)
+					        .brushOn(false)
+					        .dimension(speciesNameDimension)
+					        .group(plasmidAndResistancePercentageGroup)
+					        .x(d3.scale.ordinal().domain(speciesDomain))
+					        .y(d3.scale.linear().range([0, 100]))
+					        .margins({top: 10, right: 10, bottom: 160, left: 80})
+					        .gap(1)
+							.turnOnControls(true);
+
+					plasmidAndResistancePercentageBarChart.yAxis().tickFormat(
+			        	function (v) { return v + '%'; });
+
+
+
+					//-----populating select element----------
+					var selectElement = document.getElementById("interpro-select");
+
+					for(var i=6;i<headerNames.length;i++){
+						var currentInterpro = headerNames[i];
+						var currentOption = document.createElement('option');
+						currentOption.value = currentInterpro;
+						currentOption.innerHTML = currentInterpro;
+						selectElement.appendChild(currentOption);
+					}
+
+				    //=================INTERPRO CHARTS====================================
+
+
+					var interproChartDiv = document.getElementById("interpro_chart");
+
+					var currentInterpro = getSelectedInterpro();
+					console.log(currentInterpro);
+
+					interproGraph = dc.barChart("#interpro_chart");
+
+					interproGraph
+					        .xUnits(dc.units.ordinal)
+					        .yAxisLabel("Interpro Percentage")
+					        .width(null)
+					        .height(null)
+					        .minWidth(800)
+					        .minHeight(300)
+					        .elasticY(true)
+					        .transitionDuration(500)
+					        .brushOn(false)
+					        .gap(1)
+					        .margins({top: 10, right: 10, bottom: 160, left: 70});
+
+					interproGraph.yAxis().tickFormat(
+			        	function (v) { return v + '%'; });
+
+					updateInterproGraph();
+
+					onWindowResize();
+
+				}
+
+				function onLoad(){
+
+				}
+
+				function onWindowResize(){
+					var chart = document.getElementById("antibiotic_resistance_pie_chart");
+					var parent = chart.parentElement;
+					antibiotic_resistance_pie_chart.width(parent.offsetWidth - 20);
+					antibiotic_resistance_pie_chart.render();
+
+					chart = document.getElementById("plasmid_percentage_bar_chart");
+					var parent = chart.parentElement;
+					plasmidPercentageBarChart.width(parent.offsetWidth - 20);
+					plasmidPercentageBarChart.render();
+
+					chart = document.getElementById("plasmid_and_resistance_percentage_bar_chart");
+					var parent = chart.parentElement;
+					plasmidAndResistancePercentageBarChart.width(parent.offsetWidth - 20);
+					plasmidAndResistancePercentageBarChart.render();
+
+					chart = document.getElementById("interpro_chart");
+					var parent = chart.parentElement;
+					interproGraph.width(parent.offsetWidth - 20);
+					interproGraph.render();
+
+					dc.renderAll();
+
+				}
+
+
+
+			</script>
+	</body>
+	</html>
