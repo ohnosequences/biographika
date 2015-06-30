@@ -105,6 +105,18 @@
     display:none;
   }
 
+  .nav-bar-logo{
+	margin-left: 30px;
+	height: 40px;
+  }
+
+  .nav-bar-text{
+    width: 100%;
+  }
+
+  .modal-header {
+    background-color: #d9edf7;
+ }
 
 </style>
 <link rel="stylesheet" type="text/css" href="css/jquery-ui.css">
@@ -112,6 +124,7 @@
 <script src="js/d3.min.js"></script>
 <script src="js/x3dom.js"></script>
 <script src="js/jquery-ui.js"></script>
+<script src="js/bootstrap.js"></script>
 <script type="text/javascript"> if (!window.console) console = {log: function() {}}; </script>
 <script type="text/javascript"> window.requestFileSystem  = window.requestFileSystem || window.webkitRequestFileSystem;</script>
 <body onload="onLoad()">
@@ -119,9 +132,8 @@
     <!-- Navigation -->
     <nav class="navbar navbar-default navbar-static-top" role="navigation" style="margin-bottom: 0">
       <div class="navbar-header">
-        <a class="navbar-brand" >
-          3D Bar chart
-        </a>
+		<a href="index.html" target="_blank" class="pull-left nav-bar-logo"><img src="images/biographika_logo_tiny.svg"></a>
+          <a class="navbar-brand"><strong>Biographika: </strong>3D Bar visualization</a>
       </div>
       <!-- /.navbar-static-side -->
     </nav>
@@ -133,6 +145,7 @@
               <i class="fa fa-fw">
               </i>
               Species-Samples values
+        	  <button type="button" id="help-button" class="btn btn-default btn-sm pull-right" data-toggle="modal" data-target="#helpDialog" style="padding-top: 0px;">Help</button>
             </div>
             <!-- /.panel-heading -->
             <div id="x3d-panel" class="panel-body x3d-panel">
@@ -160,10 +173,10 @@
             <!-- /.panel-heading -->
             <div class="panel-body">
               <div id="slider-container">
-                Current value: <strong><span id="sliderValueText">0</span></strong><i>  (Move the slider to highlight bars above/below the threshold specified by the slider)</i>
-                <input type="range" min="0" max="1" value="0" id="slider" step="1" oninput="onSlideChange(value)" style="margin-botton:10px">
-            		<input type="button" value="Take screenshot!" onclick="takeScreenshot()"/>
-            		<input type="checkbox" checked="true" id="tooltips-checkbox">Tooltips activated</input>
+                  Current value: <strong><span id="sliderValueText">0</span></strong>  <span class="pull-right"><i>(Move the slider in order to highlight bars above/below the threshold specified by the slider)</i></span>
+                  <input type="range" min="0" max="1" value="0" id="slider" step="1" oninput="onSlideChange(value)" style="margin-botton:10px">
+            	  <input type="button" value="Take screenshot!" onclick="takeScreenshot()" class="pull-right"/>
+                  <input type="checkbox" checked="true" id="tooltips-checkbox" class="pull-left">Tooltips activated</input>
             	</div>
             </div>
             <!-- /.panel-body -->
@@ -173,9 +186,43 @@
     </div>
     <!-- page-wrapper -->
   </div>
-	<div id="tooltip-container" class="tooltipDivHidden">
-	    <span id="tooltipValueText"></span>
-	</div>
+  <div id="tooltip-container" class="tooltipDivHidden">
+	 <span id="tooltipValueText"></span>
+  </div>
+  <!-- help dialog -->
+  <div id="helpDialog" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" width="60%">
+    <div class="modal-dialog modal-md " role="document">
+      <div class="modal-content">
+        <div class="modal-header ">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          <h4 class="modal-title" id="myModalLabel">Help</h4>
+        </div>
+        <div class="modal-body">
+          <h3>Navigation legend</h2>
+            <table id="mouseTable">
+        		<tr >
+              <td><img src="images/Mouse_Left.png"></img></td>
+              <td id="mouseLeft">Rotate</td>
+              <td><img src="images/Mouse_Right.png"></img></td>
+              <td id="mouseRight">Zoom</td>
+            </tr>
+        		<tr >
+              <td><img src="images/Mouse_Wheel_Scroll.png"></img></td>
+              <td id="mouseWheelScroll">Zoom</td>
+              <td><img src="images/Mouse_Wheel_Press.png"></img></td>
+              <td id="mouseWheelPress">Pan</td>
+            </tr>
+        	</table>
+          <h3>What the chart represents</h2>
+          <p>
+            The horizontal axis represents the set of samples involved in a specific analysis while the vertical axis displays the taxa for which values were found in that experiment.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- help dialog -->
+
 <script type="text/javascript">
 
   window.addEventListener('resize', onWindowResize, true);
@@ -493,8 +540,6 @@
       document.getElementById("x3d").setAttribute("width",tempWidth);
       document.getElementById("x3d").setAttribute("height",tempHeight);
 
-      console.log(tempWidth);
-      console.log(tempHeight);
     }
 
     function loader(config) {
