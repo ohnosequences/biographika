@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<title>
+  Bio4j graph example
+</title>
+<!-- Bootstrap Core CSS -->
+<link href="css/bootstrap.css" rel="stylesheet" type='text/css'>
+<style type="text/css">
+
+  body {
+      background-color: #f8f8f8;
+  }
+
+  .panel {
+    margin-right: 10px;
+  	margin-left: 10px;
+  	margin-top: 10px;
+    height: 100%;
+  }
+
+  #wrapper {
+      width: 100%;
+  }
+
+  #page-wrapper {
+      background-color: #fff;
+  }
+
+  #graph-container {
+    min-height: 300px;
+  }
+
+  .nav-bar-logo{
+  	margin-left: 30px;
+  	height: 40px;
+  }
+
+  .nav-bar-text{
+    width: 100%;
+  }
+
+ .push {
+    height: 63px;
+  }
+  footer {
+      background: #d9edf7;
+      padding: 5px 0 5px 0px;
+      border-top: 1px solid #4C8DAD;
+  }
+
+</style>
+<link rel="stylesheet" type="text/css" href="css/jquery-ui.css">
+<script src="js/jquery-1.9.1.min.js"></script>
+<script src="js/d3.min.js"></script>
+<script src="js/x3dom.js"></script>
+<script src="js/jquery-ui.js"></script>
+<script src="js/bootstrap.js"></script>
+<!-- START SIGMA IMPORTS -->
+<script src="js/sigma/src/sigma.core.js"></script>
+<script src="js/sigma/src/conrad.js"></script>
+<script src="js/sigma/src/utils/sigma.utils.js"></script>
+<script src="js/sigma/src/utils/sigma.polyfills.js"></script>
+<script src="js/sigma/src/sigma.settings.js"></script>
+<script src="js/sigma/src/classes/sigma.classes.dispatcher.js"></script>
+<script src="js/sigma/src/classes/sigma.classes.configurable.js"></script>
+<script src="js/sigma/src/classes/sigma.classes.graph.js"></script>
+<script src="js/sigma/src/classes/sigma.classes.camera.js"></script>
+<script src="js/sigma/src/classes/sigma.classes.quad.js"></script>
+<script src="js/sigma/src/classes/sigma.classes.edgequad.js"></script>
+<script src="js/sigma/src/captors/sigma.captors.mouse.js"></script>
+<script src="js/sigma/src/captors/sigma.captors.touch.js"></script>
+<script src="js/sigma/src/renderers/sigma.renderers.canvas.js"></script>
+<script src="js/sigma/src/renderers/sigma.renderers.webgl.js"></script>
+<script src="js/sigma/src/renderers/sigma.renderers.svg.js"></script>
+<script src="js/sigma/src/renderers/sigma.renderers.def.js"></script>
+<script src="js/sigma/src/renderers/webgl/sigma.webgl.nodes.def.js"></script>
+<script src="js/sigma/src/renderers/webgl/sigma.webgl.nodes.fast.js"></script>
+<script src="js/sigma/src/renderers/webgl/sigma.webgl.edges.def.js"></script>
+<script src="js/sigma/src/renderers/webgl/sigma.webgl.edges.fast.js"></script>
+<script src="js/sigma/src/renderers/webgl/sigma.webgl.edges.arrow.js"></script>
+<script src="js/sigma/src/renderers/canvas/sigma.canvas.labels.def.js"></script>
+<script src="js/sigma/src/renderers/canvas/sigma.canvas.hovers.def.js"></script>
+<script src="js/sigma/src/renderers/canvas/sigma.canvas.nodes.def.js"></script>
+<script src="js/sigma/src/renderers/canvas/sigma.canvas.edges.def.js"></script>
+<script src="js/sigma/src/renderers/canvas/sigma.canvas.edges.curve.js"></script>
+<script src="js/sigma/src/renderers/canvas/sigma.canvas.edges.arrow.js"></script>
+<script src="js/sigma/src/renderers/canvas/sigma.canvas.edges.curvedArrow.js"></script>
+<script src="js/sigma/src/renderers/canvas/sigma.canvas.edgehovers.def.js"></script>
+<script src="js/sigma/src/renderers/canvas/sigma.canvas.edgehovers.curve.js"></script>
+<script src="js/sigma/src/renderers/canvas/sigma.canvas.edgehovers.arrow.js"></script>
+<script src="js/sigma/src/renderers/canvas/sigma.canvas.edgehovers.curvedArrow.js"></script>
+<script src="js/sigma/src/renderers/canvas/sigma.canvas.extremities.def.js"></script>
+<script src="js/sigma/src/renderers/svg/sigma.svg.utils.js"></script>
+<script src="js/sigma/src/renderers/svg/sigma.svg.nodes.def.js"></script>
+<script src="js/sigma/src/renderers/svg/sigma.svg.edges.def.js"></script>
+<script src="js/sigma/src/renderers/svg/sigma.svg.edges.curve.js"></script>
+<script src="js/sigma/src/renderers/svg/sigma.svg.labels.def.js"></script>
+<script src="js/sigma/src/renderers/svg/sigma.svg.hovers.def.js"></script>
+<script src="js/sigma/src/middlewares/sigma.middlewares.rescale.js"></script>
+<script src="js/sigma/src/middlewares/sigma.middlewares.copy.js"></script>
+<script src="js/sigma/src/misc/sigma.misc.animation.js"></script>
+<script src="js/sigma/src/misc/sigma.misc.bindEvents.js"></script>
+<script src="js/sigma/src/misc/sigma.misc.bindDOMEvents.js"></script>
+<script src="js/sigma/src/misc/sigma.misc.drawHovers.js"></script>
+<!-- END SIGMA IMPORTS -->
+<!-- START SIGMA PLUGINS IMPORTS -->
+<script src="js/sigma/plugins/sigma.parsers.gexf/gexf-parser.js"></script>
+<script src="js/sigma/plugins/sigma.parsers.gexf/sigma.parsers.gexf.js"></script>
+<script src="js/sigma/plugins/sigma.plugins.animate/sigma.plugins.animate.js"></script>
+<script src="js/sigma/plugins/sigma.layout.forceLink/worker.js"></script>
+<script src="js/sigma/plugins/sigma.layout.forceLink/supervisor.js"></script>
+<script src="js/sigma/plugins/sigma.renderers.halo/settings.js"></script>
+<script src="js/sigma/plugins/sigma.renderers.halo/sigma.renderers.halo.js"></script>
+<script src="js/sigma/plugins/sigma.plugins.dragNodes/sigma.plugins.dragNodes.js"></script>
+<script src="js/sigma/plugins/sigma.helpers.graph/sigma.helpers.graph.js"></script>
+<script src="js/sigma/plugins/sigma.plugins.keyboard/sigma.plugins.keyboard.js"></script>
+<script src="js/sigma/plugins/sigma.plugins.activeState/sigma.plugins.activeState.js"></script>
+<script src="js/sigma/plugins/sigma.plugins.select/sigma.plugins.select.js"></script>
+<script src="js/sigma/plugins/sigma.plugins.lasso/sigma.plugins.lasso.js"></script>
+<script src="js/sigma/plugins/sigma.layout.fruchtermanReingold/sigma.layout.fruchtermanReingold.js"></script>
+<script src="js/sigma/plugins/sigma.renderers.linkurious/canvas/sigma.canvas.labels.def.js"></script>
+<script src="js/sigma/plugins/sigma.renderers.linkurious/canvas/sigma.canvas.hovers.def.js"></script>
+<script src="js/sigma/plugins/sigma.renderers.linkurious/canvas/sigma.canvas.nodes.def.js"></script>
+<script src="js/sigma/plugins/sigma.renderers.linkurious/canvas/sigma.canvas.nodes.cross.js"></script>
+<script src="js/sigma/plugins/sigma.renderers.linkurious/canvas/sigma.canvas.nodes.diamond.js"></script>
+<script src="js/sigma/plugins/sigma.renderers.linkurious/canvas/sigma.canvas.nodes.equilateral.js"></script>
+<script src="js/sigma/plugins/sigma.renderers.linkurious/canvas/sigma.canvas.nodes.square.js"></script>
+<script src="js/sigma/plugins/sigma.renderers.linkurious/canvas/sigma.canvas.nodes.star.js"></script>
+<script src="js/sigma/plugins/sigma.renderers.linkurious/canvas/sigma.canvas.edges.def.js"></script>
+<script src="js/sigma/plugins/sigma.renderers.linkurious/canvas/sigma.canvas.edges.curve.js"></script>
+<script src="js/sigma/plugins/sigma.renderers.linkurious/canvas/sigma.canvas.edges.arrow.js"></script>
+<script src="js/sigma/plugins/sigma.renderers.linkurious/canvas/sigma.canvas.edges.curvedArrow.js"></script>
+<script src="js/sigma/plugins/sigma.exporters.gexf/sigma.exporters.gexf.js"></script>
+<!-- END SIGMA PLUGINS IMPORTS -->
+
+<script type="text/javascript"> if (!window.console) console = {log: function() {}}; </script>
+<script type="text/javascript"> window.requestFileSystem  = window.requestFileSystem || window.webkitRequestFileSystem;</script>
+<body>
+  <div id="wrapper">
+    <!-- Navigation -->
+    <nav class="navbar navbar-default navbar-static-top" role="navigation" style="margin-bottom: 0">
+      <div class="navbar-header">
+		<a href="index.html" target="_blank" class="pull-left nav-bar-logo"><img src="images/biographika_logo_tiny.svg"></a>
+          <a class="navbar-brand"><strong>Biographika: </strong>Bio4j data graph visualization</a>
+      </div>
+      <!-- /.navbar-static-side -->
+    </nav>
+    <div>
+      <div class="panel panel-info">
+        <div class="panel-heading">
+          <i class="fa fa-fw">
+          </i>
+            Graph explorer
+        </div>
+        <!-- /.panel-heading -->
+        <div class="panel-body">
+          <div class="row">
+            <div id="graph-container" class="col-md-12">
+            </div>
+          </div>
+        </div>
+        <!-- /.panel-body -->
+      </div>
+    </div>
+    <!-- page-wrapper -->
+  </div>
+  <div class="push"></div>
+  <footer>
+    <div class="container">
+      <p>This example is part of <a href="http://www.biographika.com/" rel="author">Biographika</a> project.  100% of the code is open source and released under <a href="http://www.gnu.org/licenses/agpl-3.0.en.html" rel="external">AGPLv3</a> license.</p>
+    </div>
+  </footer>
+<script type="text/javascript">
+
+var sigma1 = new sigma({
+  renderer: {
+    container: document.getElementById('graph-container'),
+    type: 'canvas'
+  },
+  settings: {
+    edgeColor: 'default',
+    defaultEdgeColor: '#ccc',
+    animationsTime: 5000,
+    drawLabels: true,
+    scalingMode: 'outside',
+    batchEdgesDrawing: true,
+    hideEdgesOnMove: true,
+    sideMargin: 1,
+    enableEdgeHovering: false,
+    borderSize: 2,
+    outerBorderSize: 3,
+    defaultNodeBorderColor: '#fff',
+    defaultNodeOuterBorderColor: 'rgb(236, 81, 72)',
+    nodeHaloColor: 'rgba(236, 81, 72, 0.2)',
+    nodeHaloSize: 50
+  }
+  });
+
+// Instanciate the ActiveState plugin:
+var activeState = sigma.plugins.activeState(sigma1);
+var keyboard = sigma.plugins.keyboard(sigma1, sigma1.renderers[0]);
+
+// Initialize the Select plugin:
+var select = sigma.plugins.select(sigma1, activeState);
+select.bindKeyboard(keyboard);
+
+// Initialize the dragNodes plugin:
+var dragListener = sigma.plugins.dragNodes(sigma1, sigma1.renderers[0], activeState);
+//select.bindDragNodes(dragListener);
+
+// Initialize the lasso plugin:
+var lasso = new sigma.plugins.lasso(sigma1, sigma1.renderers[0], {
+  'strokeStyle': 'rgb(236, 81, 72)',
+  'lineWidth': 2,
+  'fillWhileDrawing': true,
+  'fillStyle': 'rgba(236, 81, 72, 0.2)',
+  'cursor': 'crosshair'
+});
+
+// halo on active nodes:
+function renderHalo() {
+  sigma1.renderers[0].halo({
+    nodes: activeState.nodes()
+  });
+}
+
+sigma1.renderers[0].bind('render', function(e) {
+  renderHalo();
+});
+
+
+//"spacebar" + "s" keys pressed binding for the lasso tool
+keyboard.bind('32+83', function() {
+  if (lasso.isActive) {
+    lasso.deactivate();
+  } else {
+    lasso.activate();
+  }
+});
+
+// Listen for selectedNodes event
+lasso.bind('selectedNodes', function (event) {
+  activeState.dropEdges();
+
+  var nodes = event.data;
+
+  if (!nodes.length) activeState.dropNodes();
+
+  activeState.addNodes(nodes.map(function(n) { return n.id; }));
+
+  setTimeout(function() {
+    lasso.deactivate();
+    sigma1.refresh({ skipIdexation: true });
+  }, 0);
+});
+
+
+console.log("hola!");
+
+sigma.parsers.gexf('data/outputTest.gexf',sigma1, function(s) {
+ s.graph.nodes().forEach(function (n) {
+   if (!s.graph.degree(n.id)) {
+     s.graph.dropNode(n.id);
+   }
+   else {
+     n.x = Math.random();
+     n.y = Math.random();
+   }
+ });
+ s.refresh();
+
+ // Configure the ForceLink algorithm:
+ var fa = sigma.layouts.configForceLink(s, {
+   worker: true,
+   autoStop: true,
+   background: true,
+   scaleRatio: 40,
+   gravity: 4,
+   easing: 'cubicInOut'
+ });
+
+ // Bind the events:
+ fa.bind('start stop', function(e) {
+   console.log(e.type);
+
+ });
+
+ // Start the ForceLink algorithm:
+ sigma.layouts.startForceLink();
+});
+
+sigma1.bind('clickNode', function(e) {
+ var node = e.data.node;
+ var nodeType = node.attributes[2];
+
+ if(nodeType == "Organism"){
+     window.open("http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id=" + node.attributes[0],'_blank');
+ }else if(nodeType == "Protein"){
+     window.location.href = "http://www.uniprot.org/uniprot/" + node.attributes[0];
+ }else if(nodeType == "GenomeElement"){
+     window.location.href = "http://www.ncbi.nlm.nih.gov/nuccore/" + node.attributes[0];
+ }
+});
+
+ console.log("adios!");
+ //console.log(graph.nodes);
+
+ function exportToGexf(){
+     sigma1.toGEXF({
+       download: true,
+       filename: 'bio4jGraphTest.gexf',
+       nodeAttributes: 'data',
+       edgeAttributes: 'data',
+       renderer: sigma1.renderers[0],
+       creator: 'Biographika',
+       description: 'Testing the feature of exporting graphs to gexf format'
+     });
+ }
+
+
+	</script>
+</body>
+</html>
